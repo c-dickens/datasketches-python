@@ -110,6 +110,7 @@ target_sources(python
     src/count_wrapper.cpp
     src/tdigest_wrapper.cpp
     src/vector_of_kll.cpp
+    src/bloom_filter_wrapper.cpp
     src/py_serde.cpp
 )
 
