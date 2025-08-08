@@ -35,6 +35,14 @@ This problem may also be known as **heavy hitters** or **TopK**
 
    frequency/index
 
+Filters
+#######
+
+.. toctree::
+   :maxdepth: 2
+
+   filters/index
+
 Vector Sketches
 ###############
 

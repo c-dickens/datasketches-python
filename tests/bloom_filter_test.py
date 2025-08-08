@@ -16,7 +16,7 @@
 # under the License.
   
 import unittest
-from datasketches import create_bloom_filter
+from datasketches import create_bloom_filter, create_bloom_filter_by_size, bloom_filter
 
 class BloomFilterTest(unittest.TestCase):
   def test_create_bloom_filter(self):
@@ -45,6 +45,17 @@ class BloomFilterTest(unittest.TestCase):
     
     # Query for item not in filter
     self.assertFalse(bf.query("other_item"))
+
+  def test_bloom_filter_numeric_and_bytes(self):
+    """Test update and query with numeric and byte inputs"""
+    bf = create_bloom_filter(1000, 0.01)
+
+    bf.update(12345)
+    self.assertTrue(bf.query(12345))
+
+    data = b"abcdef"
+    bf.update(data)
+    self.assertTrue(bf.query(data))
 
   def test_bloom_filter_reset(self):
     """Test resetting the bloom filter to empty state"""
@@ -75,6 +86,18 @@ class BloomFilterTest(unittest.TestCase):
     non_items = ["not_item1", "not_item2", "not_item3"]
     for item in non_items:
       self.assertFalse(bf.query(item), f"Item {item} should not be found")
+
+  def test_bloom_filter_merge(self):
+    """Test merging two bloom filters"""
+    bf1 = create_bloom_filter(1000, 0.01)
+    bf2 = create_bloom_filter(1000, 0.01)
+
+    bf1.update("a")
+    bf2.update("b")
+    bf1.merge(bf2)
+
+    self.assertTrue(bf1.query("a"))
+    self.assertTrue(bf1.query("b"))
 
   def test_bloom_filter_false_positives(self):
     """Test that bloom filter can have false positives (this is expected behavior)"""
@@ -107,6 +130,12 @@ class BloomFilterTest(unittest.TestCase):
         bf = create_bloom_filter(max_items, false_positive_rate)
         self.assertIsNotNone(bf)
         self.assertTrue(bf.is_empty())
+
+  def test_bloom_filter_create_by_size(self):
+    """Test creating bloom filter with explicit size parameters"""
+    bf = create_bloom_filter_by_size(1024, 4)
+    self.assertIsNotNone(bf)
+    self.assertTrue(bf.is_empty())
 
   def test_bloom_filter_string_types(self):
     """Test that bloom filter works with different string types"""
@@ -152,5 +181,13 @@ class BloomFilterTest(unittest.TestCase):
     bf.update(number_string)
     self.assertTrue(bf.query(number_string))
 
+  def test_bloom_filter_serialize(self):
+    """Test serialization and deserialization round-trip"""
+    bf = create_bloom_filter(1000, 0.01)
+    bf.update("item")
+    data = bf.serialize()
+    bf2 = bloom_filter.deserialize(data)
+    self.assertTrue(bf2.query("item"))
+
 if __name__ == '__main__':
-    unittest.main() 
+    unittest.main()
