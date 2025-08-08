@@ -42,6 +42,8 @@ void bind_bloom_filter(nb::module_ &m, const char* name) {
   nb::class_<bloom_filter_type>(m, name)
     .def("is_empty", &bloom_filter_type::is_empty,
          "Returns True if the filter has seen no items, otherwise False")
+    .def("reset", &bloom_filter_type::reset,
+         "Resets the filter to its original empty state")
     .def("update", static_cast<void (bloom_filter_type::*)(const std::string&)>(&bloom_filter_type::update), 
          nb::arg("item"),
          "Updates the filter with the given string")

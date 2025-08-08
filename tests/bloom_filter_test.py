@@ -46,6 +46,17 @@ class BloomFilterTest(unittest.TestCase):
     # Query for item not in filter
     self.assertFalse(bf.query("other_item"))
 
+  def test_bloom_filter_reset(self):
+    """Test resetting the bloom filter to empty state"""
+    bf = create_bloom_filter(1000, 0.01)
+    bf.update("x")
+    self.assertTrue(bf.query("x"))
+    self.assertFalse(bf.is_empty())
+    bf.reset()
+    self.assertTrue(bf.is_empty())
+    # After reset, previously inserted item should no longer be reported
+    self.assertFalse(bf.query("x"))
+
   def test_bloom_filter_multiple_items(self):
     """Test adding multiple items to the bloom filter"""
     bf = create_bloom_filter(1000, 0.01)
