@@ -30,15 +30,7 @@ void bind_bloom_filter(nb::module_ &m, const char* name) {
   using namespace datasketches;
   using bloom_filter_type = bloom_filter_alloc<A>;
 
-  // Start with just one simple function
-  m.def("create_bloom_filter", 
-         [](uint64_t max_distinct_items, double target_false_positive_prob) {
-           return bloom_filter_type::builder::create_by_accuracy(max_distinct_items, target_false_positive_prob);
-         },
-         nb::arg("max_distinct_items"), nb::arg("target_false_positive_prob"),
-         "Creates a Bloom filter with optimal parameters for the given accuracy requirements");
-
-  // Bind the class with minimal methods
+  // Bind the class with static factory methods only
   nb::class_<bloom_filter_type>(m, name)
     .def("is_empty", &bloom_filter_type::is_empty,
          "Returns True if the filter has seen no items, otherwise False")
@@ -63,7 +55,39 @@ void bind_bloom_filter(nb::module_ &m, const char* name) {
             return bloom_filter_type::deserialize(bytes.c_str(), bytes.size());
         },
         nb::arg("bytes"),
-        "Reads a bytes object and returns the corresponding bloom_filter");
+        "Reads a bytes object and returns the corresponding bloom_filter")
+    .def_static("suggest_num_hashes", 
+                static_cast<uint16_t (*)(uint64_t, uint64_t)>(&bloom_filter_type::builder::suggest_num_hashes),
+                nb::arg("max_distinct_items"), nb::arg("num_filter_bits"),
+                "Suggests the optimal number of hash functions for given target numbers of distinct items and filter size")
+    .def_static("suggest_num_hashes_by_probability", 
+                static_cast<uint16_t (*)(double)>(&bloom_filter_type::builder::suggest_num_hashes),
+                nb::arg("target_false_positive_prob"),
+                "Suggests the optimal number of hash functions to achieve a target false positive probability")
+    .def_static("suggest_num_filter_bits", 
+                &bloom_filter_type::builder::suggest_num_filter_bits,
+                nb::arg("max_distinct_items"), nb::arg("target_false_positive_prob"),
+                "Suggests the optimal number of bits for given target numbers of distinct items and false positive probability")
+    .def_static("create_by_accuracy",
+                [](uint64_t max_distinct_items, double target_false_positive_prob, uint64_t seed) {
+                  return bloom_filter_type::builder::create_by_accuracy(max_distinct_items, target_false_positive_prob, seed);
+                },
+                nb::arg("max_distinct_items"), nb::arg("target_false_positive_prob"), nb::arg("seed")=bloom_filter_type::builder::generate_random_seed(),
+                "Creates a Bloom filter with optimal parameters for the given accuracy requirements\n\n"
+                ":param max_distinct_items: Maximum expected number of distinct items to add to the filter\n:type max_distinct_items: int\n"
+                ":param target_false_positive_prob: Desired false positive probability per item\n:type target_false_positive_prob: float\n"
+                ":param seed: Hash seed to use (default: random)\n:type seed: int, optional"
+                )
+    .def_static("create_by_size",
+                [](uint64_t num_bits, uint16_t num_hashes, uint64_t seed) {
+                  return bloom_filter_type::builder::create_by_size(num_bits, num_hashes, seed);
+                },
+                nb::arg("num_bits"), nb::arg("num_hashes"), nb::arg("seed")=bloom_filter_type::builder::generate_random_seed(),
+                "Creates a Bloom filter with specified size parameters\n\n"
+                ":param num_bits: Size of the Bloom filter in bits\n:type num_bits: int\n"
+                ":param num_hashes: Number of hash functions to apply to items\n:type num_hashes: int\n"
+                ":param seed: Hash seed to use (default: random)\n:type seed: int, optional"
+                );
 }
 
 void init_bloom_filter(nb::module_ &m) {
