@@ -48,6 +48,9 @@ void bind_bloom_filter(nb::module_ &m, const char* name) {
     .def("query", static_cast<bool (bloom_filter_type::*)(const std::string&) const>(&bloom_filter_type::query), 
          nb::arg("item"),
          "Queries the filter for the given string")
+    .def("get_serialized_size_bytes", 
+         [](const bloom_filter_type& sk) { return sk.get_serialized_size_bytes(); },
+         "Returns the size in bytes of the serialized image of the filter")
     .def("serialize",
         [](const bloom_filter_type& sk) {
             auto v = sk.serialize(); // vector_bytes (std::vector<uint8_t, Allocator>)

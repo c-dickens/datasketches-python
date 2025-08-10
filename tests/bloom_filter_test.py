@@ -61,6 +61,7 @@ class BloomFilterTest(unittest.TestCase):
 
     payload = bf.serialize()
     self.assertTrue(len(payload) > 0)
+    self.assertEqual(bf.get_serialized_size_bytes(), len(payload))
 
     restored = bf.deserialize(payload)
     self.assertFalse(restored.is_empty())
