@@ -47,7 +47,20 @@ void bind_bloom_filter(nb::module_ &m, const char* name) {
          "Updates the filter with the given string")
     .def("query", static_cast<bool (bloom_filter_type::*)(const std::string&) const>(&bloom_filter_type::query), 
          nb::arg("item"),
-         "Queries the filter for the given string");
+         "Queries the filter for the given string")
+    .def("serialize",
+        [](const bloom_filter_type& sk) {
+            auto v = sk.serialize(); // vector_bytes (std::vector<uint8_t, Allocator>)
+            return nb::bytes(reinterpret_cast<const char*>(v.data()), v.size());
+        },
+        "Serialize the filter to a cross-language compatible byte string")
+    .def_static(
+        "deserialize",
+        [](const nb::bytes& bytes) {
+            return bloom_filter_type::deserialize(bytes.c_str(), bytes.size());
+        },
+        nb::arg("bytes"),
+        "Reads a bytes object and returns the corresponding bloom_filter");
 }
 
 void init_bloom_filter(nb::module_ &m) {
