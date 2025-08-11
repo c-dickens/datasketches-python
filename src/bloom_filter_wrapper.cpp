@@ -94,7 +94,7 @@ void bind_bloom_filter(nb::module_ &m, const char* name) {
          nb::arg("other"),
          "Performs an intersection operation with another Bloom filter. Both filters must have the same capacity, number of hashes, and seed.")
     .def("invert", &bloom_filter_type::invert,
-         "Inverts all bits in the Bloom filter. This changes the meaning of the filter from 'might have seen' to 'definitely have not seen'.")
+         "Inverts all the bits of the BloomFilter. Approximately inverts the notion of set-membership.")
     .def("to_string", &bloom_filter_type::to_string,
          nb::arg("print_filter")=false,
          "Returns a string representation of the Bloom filter\n\n"
@@ -102,6 +102,8 @@ void bind_bloom_filter(nb::module_ &m, const char* name) {
          ":return: String representation of the filter\n:rtype: str")
     .def("__str__", [](const bloom_filter_type& self) { return self.to_string(false); },
          "Returns a string summary of the Bloom filter (without printing the bit array)")
+    .def("__repr__", [](const bloom_filter_type& self) { return self.to_string(false); },
+         "Returns a detailed string representation of the Bloom filter for debugging and REPL use")
     .def("__copy__", [](const bloom_filter_type& self) { return bloom_filter_type(self); },
          "Returns a copy of the Bloom filter")
     .def("is_compatible", &bloom_filter_type::is_compatible,
