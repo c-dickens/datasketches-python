@@ -34,12 +34,57 @@ void bind_bloom_filter(nb::module_ &m, const char* name) {
   nb::class_<bloom_filter_type>(m, name)
     .def("is_empty", &bloom_filter_type::is_empty,
          "Returns True if the filter has seen no items, otherwise False")
+    
+    // Update methods - efficient overloads for Python types
+    // Non-negative integers (uint64_t)
+    .def("update", static_cast<void (bloom_filter_type::*)(uint64_t)>(&bloom_filter_type::update), 
+         nb::arg("item"),
+         "Updates the filter with a non-negative integer")
+    // Negative/positive integers (int64_t)
+    .def("update", static_cast<void (bloom_filter_type::*)(int64_t)>(&bloom_filter_type::update), 
+         nb::arg("item"),
+         "Updates the filter with a negative/positive integer")
+    // Float (double)
+    .def("update", static_cast<void (bloom_filter_type::*)(double)>(&bloom_filter_type::update), 
+         nb::arg("item"),
+         "Updates the filter with a float")
+    // String (std::string)
     .def("update", static_cast<void (bloom_filter_type::*)(const std::string&)>(&bloom_filter_type::update), 
          nb::arg("item"),
-         "Updates the filter with the given string")
+         "Updates the filter with a string")
+    // Bytes object
+    .def("update",
+         [](bloom_filter_type& self, nb::bytes b) {
+           self.update(b.c_str(), b.size());
+         },
+         nb::arg("item"),
+         "Updates the filter with a bytes object")
+    
+    // Query methods - efficient overloads for Python types
+    // Non-negative integers (uint64_t)
+    .def("query", static_cast<bool (bloom_filter_type::*)(uint64_t) const>(&bloom_filter_type::query), 
+         nb::arg("item"),
+         "Queries the filter for a non-negative integer")
+    // Negative/positive integers (int64_t)
+    .def("query", static_cast<bool (bloom_filter_type::*)(int64_t) const>(&bloom_filter_type::query), 
+         nb::arg("item"),
+         "Queries the filter for a negative/positive integer")
+    // Float (double)
+    .def("query", static_cast<bool (bloom_filter_type::*)(double) const>(&bloom_filter_type::query), 
+         nb::arg("item"),
+         "Queries the filter for a float")
+    // String (std::string)
     .def("query", static_cast<bool (bloom_filter_type::*)(const std::string&) const>(&bloom_filter_type::query), 
          nb::arg("item"),
-         "Queries the filter for the given string")
+         "Queries the filter for a string")
+    // Bytes object
+    .def("query",
+         [](const bloom_filter_type& self, nb::bytes b) -> bool {
+           return self.query(b.c_str(), b.size());
+         },
+         nb::arg("item"),
+         "Queries the filter for a bytes object")
+    
     .def("reset", &bloom_filter_type::reset,
          "Resets the Bloom filter to its original empty state")
     .def("get_serialized_size_bytes", 

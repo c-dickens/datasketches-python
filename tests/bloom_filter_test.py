@@ -84,6 +84,29 @@ class BloomFilterTest(unittest.TestCase):
         for i in range(num_items):
             self.assertTrue(new_bf.query(str(i)))
 
+    def test_update_types(self):
+        """Test update and query with different data types."""
+        bf = bloom_filter.create_by_accuracy(1000, 0.01)
+
+        # Test integers (positive and negative)
+        for v in [0, 1, 2**40, -1, -2**40]:
+            bf.update(v)
+            self.assertTrue(bf.query(v))
+
+        # Test floats
+        for v in [0.5, -3.25]:
+            bf.update(v)
+            self.assertTrue(bf.query(v))
+
+        # Test strings
+        bf.update("hello")
+        self.assertTrue(bf.query("hello"))
+
+        # Test bytes
+        b = b"abc\x00def"
+        bf.update(b)
+        self.assertTrue(bf.query(b))
+
     def test_reset_method(self):
         """Test the reset method functionality."""
         bf = bloom_filter.create_by_accuracy(1000, 0.01)
