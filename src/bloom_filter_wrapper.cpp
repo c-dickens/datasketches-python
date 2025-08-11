@@ -40,6 +40,8 @@ void bind_bloom_filter(nb::module_ &m, const char* name) {
     .def("query", static_cast<bool (bloom_filter_type::*)(const std::string&) const>(&bloom_filter_type::query), 
          nb::arg("item"),
          "Queries the filter for the given string")
+    .def("reset", &bloom_filter_type::reset,
+         "Resets the Bloom filter to its original empty state")
     .def("get_serialized_size_bytes", 
          [](const bloom_filter_type& sk) { return sk.get_serialized_size_bytes(); },
          "Returns the size in bytes of the serialized image of the filter")
@@ -87,7 +89,27 @@ void bind_bloom_filter(nb::module_ &m, const char* name) {
                 ":param num_bits: Size of the Bloom filter in bits\n:type num_bits: int\n"
                 ":param num_hashes: Number of hash functions to apply to items\n:type num_hashes: int\n"
                 ":param seed: Hash seed to use (default: random)\n:type seed: int, optional"
-                );
+                )
+    .def_prop_ro(
+        "num_bits_used",
+        &bloom_filter_type::get_bits_used,
+        "Number of bits set to 1 in the Bloom filter"
+        )
+    .def_prop_ro(
+        "capacity",
+        &bloom_filter_type::get_capacity,
+        "Number of bits in the Bloom filter's bit array"
+        )
+    .def_prop_ro(
+        "num_hashes",
+        &bloom_filter_type::get_num_hashes,
+        "Number of hash functions used by this Bloom filter"
+        )
+    .def_prop_ro(
+        "seed",
+        &bloom_filter_type::get_seed,
+        "Hash seed used by this Bloom filter"
+        );
 }
 
 void init_bloom_filter(nb::module_ &m) {
