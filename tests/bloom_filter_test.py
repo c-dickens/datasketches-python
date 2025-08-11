@@ -354,5 +354,157 @@ class BloomFilterTest(unittest.TestCase):
         self.assertGreater(bf.num_hashes, 0)
         self.assertIsInstance(bf.seed, int)
 
+    def test_union_operation(self):
+        """Test union operation between compatible bloom filters."""
+        # Create two compatible bloom filters
+        bf1 = bloom_filter.create_by_size(1024, 5, seed=12345)
+        bf2 = bloom_filter.create_by_size(1024, 5, seed=12345)
+        
+        # Verify they are compatible
+        self.assertTrue(bf1.is_compatible(bf2))
+        self.assertTrue(bf2.is_compatible(bf1))
+        
+        # Add items to first filter
+        items1 = ["item1", "item2", "item3", "item4", "item5"]
+        for item in items1:
+            bf1.update(item)
+        
+        # Add different items to second filter
+        items2 = ["item6", "item7", "item8", "item9", "item10"]
+        for item in items2:
+            bf2.update(item)
+        
+        # Add one common item to both
+        common_item = "common_item"
+        bf1.update(common_item)
+        bf2.update(common_item)
+        
+        # Record initial state
+        initial_bits1 = bf1.num_bits_used
+        initial_bits2 = bf2.num_bits_used
+        
+        # Perform union operation
+        bf1.union_with(bf2)
+        
+        # Verify all items from both filters are now in bf1
+        all_items = items1 + items2 + [common_item]
+        for item in all_items:
+            self.assertTrue(bf1.query(item))
+        
+        # Verify bits used increased (union should have more bits set)
+        self.assertGreaterEqual(bf1.num_bits_used, initial_bits1)
+        self.assertGreaterEqual(bf1.num_bits_used, initial_bits2)
+        
+        # Verify bf2 is unchanged
+        for item in items2 + [common_item]:
+            self.assertTrue(bf2.query(item))
+        for item in items1:
+            self.assertFalse(bf2.query(item))
+
+    def test_intersection_operation(self):
+        """Test intersection operation between compatible bloom filters."""
+        # Create two compatible bloom filters
+        bf1 = bloom_filter.create_by_size(1024, 5, seed=12345)
+        bf2 = bloom_filter.create_by_size(1024, 5, seed=12345)
+        
+        # Verify they are compatible
+        self.assertTrue(bf1.is_compatible(bf2))
+        
+        # Add items to first filter
+        items1 = ["item1", "item2", "item3", "item4", "item5"]
+        for item in items1:
+            bf1.update(item)
+        
+        # Add different items to second filter
+        items2 = ["item6", "item7", "item8", "item9", "item10"]
+        for item in items2:
+            bf2.update(item)
+        
+        # Add common items to both
+        common_items = ["common1", "common2", "common3"]
+        for item in common_items:
+            bf1.update(item)
+            bf2.update(item)
+        
+        # Record initial state
+        initial_bits1 = bf1.num_bits_used
+        initial_bits2 = bf2.num_bits_used
+        
+        # Perform intersection operation
+        bf1.intersect(bf2)
+        
+        # Verify only common items remain in bf1
+        for item in common_items:
+            self.assertTrue(bf1.query(item))
+        
+        # Verify items unique to each filter are no longer in bf1
+        for item in items1:
+            self.assertFalse(bf1.query(item))
+        for item in items2:
+            self.assertFalse(bf1.query(item))
+        
+        # Verify bits used decreased (intersection should have fewer bits set)
+        self.assertLessEqual(bf1.num_bits_used, initial_bits1)
+        
+        # Verify bf2 is unchanged
+        for item in items2 + common_items:
+            self.assertTrue(bf2.query(item))
+        for item in items1:
+            self.assertFalse(bf2.query(item))
+
+    def test_incompatible_filters(self):
+        """Test that union and intersection fail with incompatible filters."""
+        # Create filters with different capacities
+        bf1 = bloom_filter.create_by_size(1024, 5, seed=12345)
+        bf2 = bloom_filter.create_by_size(2048, 5, seed=12345)
+        
+        self.assertFalse(bf1.is_compatible(bf2))
+        self.assertFalse(bf2.is_compatible(bf1))
+        
+        # Should raise exception for union
+        with self.assertRaises(Exception):
+            bf1.union_with(bf2)
+        
+        # Should raise exception for intersection
+        with self.assertRaises(Exception):
+            bf1.intersect(bf2)
+        
+        # Create filters with different number of hashes
+        bf3 = bloom_filter.create_by_size(1024, 3, seed=12345)
+        self.assertFalse(bf1.is_compatible(bf3))
+        
+        # Create filters with different seeds
+        bf4 = bloom_filter.create_by_size(1024, 5, seed=54321)
+        self.assertFalse(bf1.is_compatible(bf4))
+
+    def test_union_intersection_edge_cases(self):
+        """Test edge cases for union and intersection operations."""
+        # Test with empty filters
+        bf1 = bloom_filter.create_by_size(1024, 5, seed=12345)
+        bf2 = bloom_filter.create_by_size(1024, 5, seed=12345)
+        
+        # Union of empty filters should remain empty
+        bf1.union_with(bf2)
+        self.assertTrue(bf1.is_empty())
+        self.assertEqual(bf1.num_bits_used, 0)
+        
+        # Intersection of empty filters should remain empty
+        bf1.reset()
+        bf1.intersect(bf2)
+        self.assertTrue(bf1.is_empty())
+        self.assertEqual(bf1.num_bits_used, 0)
+        
+        # Test union with self
+        bf1.update("test_item")
+        initial_bits = bf1.num_bits_used
+        bf1.union_with(bf1)
+        self.assertEqual(bf1.num_bits_used, initial_bits)
+        self.assertTrue(bf1.query("test_item"))
+        
+        # Test intersection with self
+        bf1.intersect(bf1)
+        self.assertEqual(bf1.num_bits_used, initial_bits)
+        self.assertTrue(bf1.query("test_item"))
+
 if __name__ == '__main__':
     unittest.main() 

@@ -87,6 +87,15 @@ void bind_bloom_filter(nb::module_ &m, const char* name) {
     
     .def("reset", &bloom_filter_type::reset,
          "Resets the Bloom filter to its original empty state")
+    .def("union_with", &bloom_filter_type::union_with,
+         nb::arg("other"),
+         "Performs a union operation with another Bloom filter. Both filters must have the same capacity, number of hashes, and seed.")
+    .def("intersect", &bloom_filter_type::intersect,
+         nb::arg("other"),
+         "Performs an intersection operation with another Bloom filter. Both filters must have the same capacity, number of hashes, and seed.")
+    .def("is_compatible", &bloom_filter_type::is_compatible,
+         nb::arg("other"),
+         "Returns True if the other Bloom filter is compatible for union/intersection operations (same capacity, num_hashes, and seed)")
     .def("get_serialized_size_bytes", 
          [](const bloom_filter_type& sk) { return sk.get_serialized_size_bytes(); },
          "Returns the size in bytes of the serialized image of the filter")
