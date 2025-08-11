@@ -506,5 +506,136 @@ class BloomFilterTest(unittest.TestCase):
         self.assertEqual(bf1.num_bits_used, initial_bits)
         self.assertTrue(bf1.query("test_item"))
 
+    def test_invert_operation(self):
+        """Test the invert operation on bloom filters."""
+        num_bits = 8192
+        num_hashes = 3
+        
+        bf = bloom_filter.create_by_size(num_bits, num_hashes)
+        
+        # Add items
+        n = 500
+        for i in range(n):
+            bf.update(i)
+        
+        num_bits_set = bf.num_bits_used
+        bf.invert()
+        
+        # After inversion, bits used should be capacity - original_bits_used
+        self.assertEqual(bf.num_bits_used, num_bits - num_bits_set)
+        
+        # Original items should be mostly not-present
+        num_found = 0
+        for i in range(n):
+            if bf.query(i):
+                num_found += 1
+        
+        # Should find less than 10% of original items (allowing for false positives)
+        self.assertLess(num_found, n // 10)
+        
+        # Many other items should be "present"
+        num_found = 0
+        for i in range(n, num_bits):
+            if bf.query(i):
+                num_found += 1
+        
+        # Should find more items than were originally added
+        self.assertGreater(num_found, n)
+
+    def test_invert_empty_filter(self):
+        """Test invert operation on an empty bloom filter."""
+        num_bits = 1024
+        bf = bloom_filter.create_by_size(num_bits, 5, seed=12345)
+        
+        # Initially empty
+        self.assertTrue(bf.is_empty())
+        self.assertEqual(bf.num_bits_used, 0)
+        
+        # Invert empty filter
+        bf.invert()
+        
+        # After inversion, all bits should be set
+        self.assertEqual(bf.num_bits_used, num_bits)
+        
+        # All items should be found (since all bits are now 1)
+        test_items = ["item1", "item2", "item3", "item4", "item5"]
+        for item in test_items:
+            self.assertTrue(bf.query(item))
+        
+        # Invert again - should be empty again
+        bf.invert()
+        self.assertTrue(bf.is_empty())
+        self.assertEqual(bf.num_bits_used, 0)
+        
+        # No items should be found
+        for item in test_items:
+            self.assertFalse(bf.query(item))
+
+    def test_invert_full_filter(self):
+        """Test invert operation on a nearly full bloom filter."""
+        num_bits = 64
+        bf = bloom_filter.create_by_size(num_bits, 3, seed=12345)  # Small filter for testing
+        
+        # Add many items to fill most bits
+        for i in range(50):
+            bf.update(f"item_{i}")
+        
+        # Record state
+        bits_before = bf.num_bits_used
+        
+        # Invert the filter
+        bf.invert()
+        
+        # Check that bits used follows the mathematical relationship
+        self.assertEqual(bf.num_bits_used, num_bits - bits_before)
+        
+        # Original items should not be found
+        for i in range(50):
+            self.assertFalse(bf.query(f"item_{i}"))
+        
+        # Invert again - should return to original state
+        bf.invert()
+        self.assertEqual(bf.num_bits_used, bits_before)
+        
+        # Original items should be found again
+        for i in range(50):
+            self.assertTrue(bf.query(f"item_{i}"))
+
+    def test_invert_mathematical_properties(self):
+        """Test mathematical properties of the invert operation."""
+        bf = bloom_filter.create_by_size(1024, 5, seed=12345)
+        
+        # Test that double inversion is identity
+        test_items = ["item1", "item2", "item3"]
+        for item in test_items:
+            bf.update(item)
+        
+        # Record initial state
+        initial_bits = bf.num_bits_used
+        
+        # First inversion
+        bf.invert()
+        bits_after_first = bf.num_bits_used
+        
+        # Second inversion
+        bf.invert()
+        bits_after_second = bf.num_bits_used
+        
+        # Should be back to original state
+        self.assertEqual(bits_after_second, initial_bits)
+        
+        # All original items should be found again
+        for item in test_items:
+            self.assertTrue(bf.query(item))
+        
+        # Test that double inversion preserves the original query behavior
+        # This is the key property: invert(invert(filter)) == filter
+        for item in test_items:
+            self.assertTrue(bf.query(item))
+        
+        # Test that the filter is not empty after double inversion
+        self.assertFalse(bf.is_empty())
+        self.assertEqual(bf.num_bits_used, initial_bits)
+
 if __name__ == '__main__':
     unittest.main() 
